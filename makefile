@@ -32,14 +32,14 @@ LIBS_PATH =
 # This will be used to relink the project if one of the static lib changes (optional).
 STATIC_PATH = 
 # Path containing external header files (optional)
-INCLUDES = 
+INCLUDES = `pkg-config --cflags freetype2 opencv4 | sed "s/-I/-isystem/g"`
 
 #Linker flags
-LDFLAGS = `pkg-config --libs freetype2`
+LDFLAGS = 
 # Compiler flags
-CFLAGS = -O0 -g -std=c++20 -Wall -Wextra -pedantic `pkg-config --cflags freetype2`
+CFLAGS = -O0 -g -std=c++20 -Wall -Wextra -pedantic
 # Libraries
-LIBS = 
+LIBS = `pkg-config --libs freetype2 opencv4`
 
 # Source extension
 SRC_EXT = cpp
