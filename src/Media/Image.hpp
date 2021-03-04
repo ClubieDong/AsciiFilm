@@ -2,6 +2,7 @@
 
 #include <string>
 #include <boost/multi_array.hpp>
+#include <opencv2/imgcodecs.hpp>
 #include "../Utilities/Json.hpp"
 #include "../Utilities/Color.hpp"
 #include "Media.hpp"
@@ -24,12 +25,25 @@ private:
 
     boost::multi_array<Color, 2> _Data;
 
-    void LoadFromFile(Info &&info);
+    void LoadFromMat(cv::Mat &&img, unsigned int width, unsigned int height);
+    inline void LoadFromFile(Info &&info)
+    {
+        auto img = cv::imread(info.FilePath, cv::IMREAD_UNCHANGED);
+        if (img.empty())
+            throw std::invalid_argument("OpenCV Error: Fail to load image!");
+        FitAspectRatio(info.Width, info.Height, info.AspectRatio,
+                       static_cast<double>(img.size[0]) / img.size[1]);
+        LoadFromMat(std::move(img), info.Width, info.Height);
+    }
 
 public:
     inline explicit Image(json &option, const std::string &location, double aspectRatio)
     {
-        Create(option, location, aspectRatio);
+        Create(Info(option, location, aspectRatio));
+    }
+    inline explicit Image(cv::Mat &&img, unsigned int width, unsigned int height)
+    {
+        LoadFromMat(std::move(img), width, height);
     }
 
     // DEBUG

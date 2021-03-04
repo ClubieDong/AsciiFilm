@@ -31,7 +31,7 @@ private:
 public:
     inline explicit Glyph(json &option, const std::string &location, double aspectRatio)
     {
-        Create(option, location, aspectRatio);
+        Create(Info(option, location, aspectRatio));
     }
 
     // DEBUG

@@ -24,17 +24,14 @@ Glyph::Info::Info(json &option, const std::string &location, double aspectRatio)
     GrayScale = option["grayScale"].get<bool>();
     if (ID.empty())
         ID = option["text"].get<std::string>();
-    if (Width != 0 && Height == 0)
-        Height = Width / aspectRatio;
-    else if (Width == 0 && Height != 0)
-        Width = Height * aspectRatio;
-    else if (Width == 0 && Height == 0)
+    if (Width == 0 && Height == 0)
         throw std::invalid_argument("Expect at least one non-zero value "
                                     "between \"width\" and \"height\" fields in " +
                                     location);
+    FitAspectRatio(Width, Height, aspectRatio, 1);
 }
 
-void Glyph::LoadFromFile(Info&& info)
+void Glyph::LoadFromFile(Info &&info)
 {
     FontFace face(info.FilePath, info.FaceIndex);
     if (FT_Set_Pixel_Sizes(face, info.Width, info.Height))

@@ -1,5 +1,4 @@
 #include "Image.hpp"
-#include <opencv2/imgcodecs.hpp>
 #include <opencv2/imgproc.hpp>
 
 Image::Info::Info(json &option, const std::string &location, double aspectRatio)
@@ -25,15 +24,10 @@ Image::Info::Info(json &option, const std::string &location, double aspectRatio)
                                     location);
 }
 
-void Image::LoadFromFile(Info &&info)
+void Image::LoadFromMat(cv::Mat &&img, unsigned int width, unsigned int height)
 {
-    auto img = cv::imread(info.FilePath, cv::IMREAD_UNCHANGED);
-    if (info.Width == 0)
-        info.Width = std::round(info.AspectRatio * img.size[1] / img.size[0] * info.Height);
-    else if (info.Height == 0)
-        info.Height = std::round(1 / info.AspectRatio * img.size[0] / img.size[1] * info.Width);
-    _Data.resize(boost::extents[info.Height][info.Width]);
-    cv::Size size(info.Width, info.Height);
+    _Data.resize(boost::extents[height][width]);
+    cv::Size size(width, height);
     auto inter = img.total() > _Data.num_elements() ? cv::INTER_AREA : cv::INTER_CUBIC;
     cv::resize(img, img, size, 0, 0, inter);
     auto destIter = _Data.origin();

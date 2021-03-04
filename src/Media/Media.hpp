@@ -14,16 +14,25 @@ protected:
     public:
         std::string ID;
         std::filesystem::path FilePath;
-    
+
     protected:
         inline ~Info() = default;
     };
 
     inline ~Media() = default;
 
-    inline void Create(json &option, const std::string &location, double aspectRatio)
+    template <typename Info>
+    inline void Create(Info &&info)
     {
-        typename T::Info info(option, location, aspectRatio);
-        static_cast<T*>(this)->LoadFromFile(std::move(info));
+        static_cast<T *>(this)->LoadFromFile(std::move(info));
+    }
+
+    inline static void FitAspectRatio(unsigned int &width, unsigned int &height,
+                               double pixelAspectRatio, double imageAspectRatio)
+    {
+        if (width == 0)
+            width = std::round(pixelAspectRatio / imageAspectRatio * height);
+        else if (height == 0)
+            height = std::round(imageAspectRatio / pixelAspectRatio * width);
     }
 };
