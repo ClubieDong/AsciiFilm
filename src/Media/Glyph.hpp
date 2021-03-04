@@ -1,33 +1,43 @@
 #pragma once
 
-#include "Media.hpp"
-#include <filesystem>
-#include <variant>
 #include <string>
+#include <vector>
 #include <boost/multi_array.hpp>
 #include "../Utilities/Json.hpp"
+#include "Media.hpp"
 
 // DEBUG
 #include <iostream>
 
-class Glyph : public Media
+class Glyph : public Media<Glyph>
 {
-private:
-    std::filesystem::path _FilePath;
-    unsigned int _FaceIndex;
-    unsigned int _Height;
-    wchar_t _Text;
-    bool _GrayScale;
+    friend class Media<Glyph>;
 
-    boost::multi_array<unsigned char, 2> _Data;
+private:
+    struct Info : public Media<Glyph>::Info
+    {
+        unsigned int FaceIndex;
+        unsigned int Width, Height;
+        std::wstring Text;
+        bool GrayScale;
+
+        explicit Info(json &option, const std::string &location, double aspectRatio);
+    };
+
+    std::vector<boost::multi_array<unsigned char, 2>> _Data;
+
+    void LoadFromFile(Info &&info);
 
 public:
-    explicit Glyph(json &option, const std::string &location, double aspectRatio);
+    inline explicit Glyph(json &option, const std::string &location, double aspectRatio)
+    {
+        Create(option, location, aspectRatio);
+    }
 
     // DEBUG
     void Show() const
     {
-        for (const auto &i : _Data)
+        for (const auto &i : _Data.front())
         {
             for (auto j : i)
             {

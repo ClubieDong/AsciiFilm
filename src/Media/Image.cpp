@@ -1,35 +1,39 @@
 #include "Image.hpp"
-#include <cmath>
 #include <opencv2/imgcodecs.hpp>
 #include <opencv2/imgproc.hpp>
 
-Image::Image(json &option, const std::string &location, double aspectRatio)
+Image::Info::Info(json &option, const std::string &location, double aspectRatio)
+    : AspectRatio(aspectRatio)
 {
-    // Get property from JSON
     using jt = json::value_t;
     static auto validator =
         JsonValidator()
-            .AddRequired("id", jt::string)
+            .AddOptional("id", jt::string, "")
             .AddRequired("filePath", jt::string)
             .AddOptional("width", jt::number_unsigned, 0)
             .AddOptional("height", jt::number_unsigned, 0);
     validator.Validate(option, location);
-    _ID = option["id"].get<std::string>();
-    _FilePath = option["filePath"].get<std::string>();
-    _Width = option["width"].get<unsigned int>();
-    _Height = option["height"].get<unsigned int>();
-    if (_Width == 0 && _Height == 0)
+    ID = option["id"].get<std::string>();
+    FilePath = option["filePath"].get<std::string>();
+    Width = option["width"].get<unsigned int>();
+    Height = option["height"].get<unsigned int>();
+    if (ID.empty())
+        ID = FilePath.filename();
+    if (Width == 0 && Height == 0)
         throw std::invalid_argument("Expect at least one non-zero value "
                                     "between \"width\" and \"height\" fields in " +
                                     location);
-    // Load image
-    auto img = cv::imread(_FilePath, cv::IMREAD_UNCHANGED);
-    if (_Width == 0)
-        _Width = std::round(aspectRatio * img.size[1] / img.size[0] * _Height);
-    else if (_Height == 0)
-        _Height = std::round(1 / aspectRatio * img.size[0] / img.size[1] * _Width);
-    _Data.resize(boost::extents[_Height][_Width]);
-    cv::Size size(_Width, _Height);
+}
+
+void Image::LoadFromFile(Info &&info)
+{
+    auto img = cv::imread(info.FilePath, cv::IMREAD_UNCHANGED);
+    if (info.Width == 0)
+        info.Width = std::round(info.AspectRatio * img.size[1] / img.size[0] * info.Height);
+    else if (info.Height == 0)
+        info.Height = std::round(1 / info.AspectRatio * img.size[0] / img.size[1] * info.Width);
+    _Data.resize(boost::extents[info.Height][info.Width]);
+    cv::Size size(info.Width, info.Height);
     auto inter = img.total() > _Data.num_elements() ? cv::INTER_AREA : cv::INTER_CUBIC;
     cv::resize(img, img, size, 0, 0, inter);
     auto destIter = _Data.origin();

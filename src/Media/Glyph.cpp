@@ -1,46 +1,62 @@
 #include "Glyph.hpp"
-#include <stdexcept>
-#include "../Utilities/Font.hpp"
 #include "../Utilities/UTF.hpp"
+#include "../Utilities/Font.hpp"
 
-Glyph::Glyph(json &option, const std::string &location, double aspectRatio)
+Glyph::Info::Info(json &option, const std::string &location, double aspectRatio)
 {
-    // Get property from JSON
     using jt = json::value_t;
     static auto validator =
         JsonValidator()
-            .AddRequired("id", jt::string)
+            .AddOptional("id", jt::string, "")
             .AddRequired("filePath", jt::string)
             .AddOptional("faceIndex", jt::number_unsigned, 0)
-            .AddRequired("height", jt::number_unsigned)
+            .AddOptional("width", jt::number_unsigned, 0)
+            .AddOptional("height", jt::number_unsigned, 0)
             .AddRequired("text", jt::string)
             .AddOptional("grayScale", jt::boolean, false);
     validator.Validate(option, location);
-    _ID = option["id"].get<std::string>();
-    _FilePath = option["filePath"].get<std::string>();
-    _FaceIndex = option["faceIndex"].get<unsigned int>();
-    _Height = option["height"].get<unsigned int>();
-    auto textStr = Utf8ToUnicode::Convert(option["text"].get<std::string>());
-    if (textStr.size() != 1)
-        throw std::invalid_argument("Expect one and only one character in " + location + ".text");
-    _Text = textStr[0];
-    _GrayScale = option["grayScale"].get<bool>();
-    // Load glyph
-    FontFace face(_FilePath, _FaceIndex);
-    if (FT_Set_Pixel_Sizes(face, _Height * aspectRatio, _Height))
+    ID = option["id"].get<std::string>();
+    FilePath = option["filePath"].get<std::string>();
+    FaceIndex = option["faceIndex"].get<unsigned int>();
+    Width = option["width"].get<unsigned int>();
+    Height = option["height"].get<unsigned int>();
+    Text = Utf8ToUnicode::Convert(option["text"].get<std::string>());
+    GrayScale = option["grayScale"].get<bool>();
+    if (ID.empty())
+        ID = option["text"].get<std::string>();
+    if (Width != 0 && Height == 0)
+        Height = Width / aspectRatio;
+    else if (Width == 0 && Height != 0)
+        Width = Height * aspectRatio;
+    else if (Width == 0 && Height == 0)
+        throw std::invalid_argument("Expect at least one non-zero value "
+                                    "between \"width\" and \"height\" fields in " +
+                                    location);
+}
+
+void Glyph::LoadFromFile(Info&& info)
+{
+    FontFace face(info.FilePath, info.FaceIndex);
+    if (FT_Set_Pixel_Sizes(face, info.Width, info.Height))
         throw std::runtime_error("FreeType2 Error: Fail to set size!");
     if (FT_Select_Charmap(face, FT_ENCODING_UNICODE))
         throw std::runtime_error("FreeType2 Error: Fail to set charmap!");
     constexpr FT_ULong LOAD_FLAGS[2] = {FT_LOAD_RENDER | FT_LOAD_MONOCHROME, FT_LOAD_RENDER};
-    if (FT_Load_Char(face, _Text, LOAD_FLAGS[_GrayScale]))
-        throw std::runtime_error("FreeType2 Error: Fail to load and render glyph!");
-    auto &bitmap = static_cast<FT_Face>(face)->glyph->bitmap;
-    _Data.resize(boost::extents[bitmap.rows][bitmap.width]);
-    for (unsigned int i = 0; i < bitmap.rows; ++i)
-        for (unsigned int j = 0; j < bitmap.width; ++j)
-            // I hope compiler do the loop-invariant code motion for me.
-            if (_GrayScale)
-                _Data[i][j] = *(bitmap.buffer + bitmap.pitch * i + j);
-            else
-                _Data[i][j] = ((*(bitmap.buffer + bitmap.pitch * i + j / 8) >> (7 - j % 8)) & 1) * 0xFF;
+    auto loadFlags = LOAD_FLAGS[info.GrayScale];
+    const auto &bitmap = static_cast<FT_Face>(face)->glyph->bitmap;
+    _Data.reserve(info.Text.size());
+    for (auto wch : info.Text)
+    {
+        if (FT_Load_Char(face, wch, loadFlags))
+            throw std::runtime_error("FreeType2 Error: Fail to load and render glyph!");
+        _Data.emplace_back(boost::extents[bitmap.rows][bitmap.width]);
+        for (unsigned int i = 0; i < bitmap.rows; ++i)
+            for (unsigned int j = 0; j < bitmap.width; ++j)
+                // I hope compiler do the loop-invariant code motion for me.
+                // TODO: Check if compiler actually do the code motion, probably need to optimize.
+                if (info.GrayScale)
+                    _Data.back()[i][j] = *(bitmap.buffer + bitmap.pitch * i + j);
+                else
+                    _Data.back()[i][j] = ((*(bitmap.buffer + bitmap.pitch * i + j / 8) >> (7 - j % 8)) & 1) * 0xFF;
+    }
 }
