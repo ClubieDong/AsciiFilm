@@ -16,12 +16,11 @@ class Video : public Media<Video>
 private:
     struct Info : public Media<Video>::Info
     {
-        unsigned int Width, Height;
-        double AspectRatio;
-        double FPS;
+        double AspectRatio, FPS;
 
-        explicit Info(json &option, const std::string &location,
-                      double aspectRatio, double fps);
+        inline explicit Info(json &option, const std::string &location,
+                             double aspectRatio, double fps)
+            : Media::Info(option, location), AspectRatio(aspectRatio), FPS(fps) {}
     };
 
     std::vector<Image> _Data;

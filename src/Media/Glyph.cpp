@@ -3,31 +3,18 @@
 #include "../Utilities/Font.hpp"
 
 Glyph::Info::Info(json &option, const std::string &location, double aspectRatio)
+    : Media::Info(option, location)
 {
     using jt = json::value_t;
     static auto validator =
         JsonValidator()
-            .AddOptional("id", jt::string, "")
-            .AddRequired("filePath", jt::string)
             .AddOptional("faceIndex", jt::number_unsigned, 0)
-            .AddOptional("width", jt::number_unsigned, 0)
-            .AddOptional("height", jt::number_unsigned, 0)
             .AddRequired("text", jt::string)
             .AddOptional("grayScale", jt::boolean, false);
     validator.Validate(option, location);
-    ID = option["id"].get<std::string>();
-    FilePath = option["filePath"].get<std::string>();
     FaceIndex = option["faceIndex"].get<unsigned int>();
-    Width = option["width"].get<unsigned int>();
-    Height = option["height"].get<unsigned int>();
     Text = Utf8ToUnicode::Convert(option["text"].get<std::string>());
     GrayScale = option["grayScale"].get<bool>();
-    if (ID.empty())
-        ID = option["text"].get<std::string>();
-    if (Width == 0 && Height == 0)
-        throw std::invalid_argument("Expect at least one non-zero value "
-                                    "between \"width\" and \"height\" fields in " +
-                                    location);
     FitAspectRatio(Width, Height, aspectRatio, 1);
 }
 

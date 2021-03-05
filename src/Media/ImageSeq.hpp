@@ -16,10 +16,10 @@ class ImageSeq : public Media<ImageSeq>
 private:
     struct Info : public Media<ImageSeq>::Info
     {
-        unsigned int Width, Height;
         double AspectRatio;
 
-        explicit Info(json &option, const std::string &location, double aspectRatio);
+        inline explicit Info(json &option, const std::string &location, double aspectRatio)
+            : Media::Info(option, location), AspectRatio(aspectRatio) {}
     };
 
     std::vector<Image> _Data;

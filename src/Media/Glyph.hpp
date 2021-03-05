@@ -17,7 +17,6 @@ private:
     struct Info : public Media<Glyph>::Info
     {
         unsigned int FaceIndex;
-        unsigned int Width, Height;
         std::wstring Text;
         bool GrayScale;
 

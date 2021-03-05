@@ -17,10 +17,10 @@ class Image : public Media<Image>
 private:
     struct Info : public Media<Image>::Info
     {
-        unsigned int Width, Height;
         double AspectRatio;
 
-        explicit Info(json &option, const std::string &location, double aspectRatio);
+        inline explicit Info(json &option, const std::string &location, double aspectRatio)
+            : Media::Info(option, location), AspectRatio(aspectRatio) {}
     };
 
     boost::multi_array<Color, 2> _Data;
